@@ -1,0 +1,31 @@
+[Unit]
+Description=The Searcher — web research for the Sentinel
+Documentation=https://github.com/farukhanci/the-searcher
+# Ollama is a system service; a user unit cannot order itself against it, so
+# the restart loop below is what actually handles Ollama not being up yet.
+After=network-online.target
+
+[Service]
+Type=exec
+WorkingDirectory=%h/the-searcher
+
+# The venv's python is used directly, so the unit does not depend on the shell
+# activating anything. This is why forgetting `source activate` stops mattering.
+ExecStart=%h/.venvs/searcher/bin/uvicorn serve:app --host 0.0.0.0 --port 8199
+
+# Open WebUI reaches this through host.docker.internal, so it has to listen on
+# more than loopback. It is bound to the machine, not published anywhere.
+Environment=PYTHONUNBUFFERED=1
+
+Restart=on-failure
+RestartSec=5
+# If Ollama is not up yet at boot, the first few starts fail. Keep trying for
+# five minutes rather than giving up.
+StartLimitBurst=60
+StartLimitIntervalSec=300
+
+# A research run holds the GPU for a while; do not kill it mid-read.
+TimeoutStopSec=60
+
+[Install]
+WantedBy=default.target
