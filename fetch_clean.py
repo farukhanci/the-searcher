@@ -28,7 +28,11 @@ except ImportError:      # PDFs simply stay unreadable if it is not installed
 
 # ---------------------------------------------------------------- settings
 
-TIMEOUT = 30.0          # seconds, matches the Open WebUI default
+TIMEOUT = 30.0          # httpx applies this PER READ, not per request
+# A server that trickles bytes resets that timer with every chunk and can hold
+# a slot for minutes - seen as CLOSE-WAIT sockets with 170 kB sitting unread.
+# This is the wall clock for one URL, start to finish.
+TOTAL_TIMEOUT = 45.0
 CONCURRENCY = 6         # parallel fetches
 MAX_HTML_BYTES = 8_000_000
 # One 2-minute stall in a round came from parsing a single oversized PDF while
@@ -92,9 +96,10 @@ async def _fetch_one(client: httpx.AsyncClient, url: str, sem: asyncio.Semaphore
     page = Page(url=url)
     async with sem:
         try:
-            r = await client.get(url)
-        except httpx.TimeoutException:
-            page.status, page.reason = "[RETRY]", f"timed out after {TIMEOUT:.0f}s"
+            async with asyncio.timeout(TOTAL_TIMEOUT):
+                r = await client.get(url)
+        except (httpx.TimeoutException, TimeoutError):
+            page.status, page.reason = "[RETRY]", f"timed out after {TOTAL_TIMEOUT:.0f}s"
             return page
         except httpx.HTTPError as e:
             page.status, page.reason = "[STOP]", f"{type(e).__name__}: {e}"
