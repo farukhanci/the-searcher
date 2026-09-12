@@ -27,22 +27,17 @@ from fetch_clean import Page, fetch_and_clean
 
 # ---------------------------------------------------------------- settings
 
-OLLAMA_URL = "http://localhost:11434/api/chat"
-MODEL = "hf.co/openbmb/MiniCPM5-2B-GGUF:Q8_0"
+from config import OLLAMA_URL, MODEL, NUM_CTX, NUM_GPU, TEMPERATURE, TOP_P
 
 # One value for every checker call. Ollama reloads the model when num_ctx
 # changes, so varying it per page would cost a reload each time. Measured:
 # Q8 weights + q8_0 KV cache at 128k = 5.6 GB on a 6 GB card.
-NUM_CTX = 128000
-NUM_GPU = 256
 CALL_TIMEOUT = 300.0
 
 # OpenBMB's documented no-think sampling. A lower temperature would paraphrase
 # less, but going against a small model's recommended values tends to misbehave
 # in other ways — and verification below catches paraphrase regardless, so this
 # choice is low-stakes either way.
-TEMPERATURE = 1.0     # model card recommendation
-TOP_P = 0.95
 
 # Short on purpose. Measured on this model: longer prompts produced worse
 # research, not better.

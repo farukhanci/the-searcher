@@ -24,16 +24,11 @@ import httpx
 
 from searcher import for_planner, research
 
-OLLAMA_URL = "http://localhost:11434/api/chat"
-MODEL = "hf.co/openbmb/MiniCPM5-2B-GGUF:Q8_0"
+from config import OLLAMA_URL, MODEL, NUM_CTX, NUM_GPU, TEMPERATURE, TOP_P
 
 # Same window the checker uses. Keeping them equal means Ollama never reloads
 # the model between planning and reading. Raise it if the planner ever runs out
 # of room, and accept a reload per round in exchange.
-NUM_CTX = 128000
-NUM_GPU = 256
-TEMPERATURE = 1.0
-TOP_P = 0.95
 
 MAX_ROUNDS = 10         # a stop, not a target - the model decides when it is done
 CALL_TIMEOUT = 900.0

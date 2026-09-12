@@ -27,7 +27,7 @@ from store import render, store
 
 # ---------------------------------------------------------------- settings
 
-SEARXNG = "http://localhost:8080/search"
+from config import SEARXNG
 SEARCH_TIMEOUT = 30.0
 
 # When every engine on the local instance has been rate-limited, a public
