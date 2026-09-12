@@ -288,3 +288,11 @@ made those measurements.
 `runs/` holds unedited output from three real runs, with a note on what each
 one demonstrates — including a working run and an empty one on the same topic
 sixty-one seconds apart.
+
+## License
+
+MIT — see `LICENSE`.
+
+The model is separate. MiniCPM5-2B is Apache 2.0 and comes with its own terms;
+so do SearXNG and the search engines behind it. This license covers the code
+in this repository, nothing it talks to.
