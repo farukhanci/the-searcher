@@ -5,6 +5,12 @@ Documentation=https://github.com/farukhanci/the-searcher
 # the restart loop below is what actually handles Ollama not being up yet.
 After=network-online.target
 
+# If Ollama is not up yet at boot, the first few starts fail. Keep trying for
+# five minutes rather than giving up. These belong in [Unit] - systemd ignores
+# them under [Service].
+StartLimitBurst=60
+StartLimitIntervalSec=300
+
 [Service]
 Type=exec
 WorkingDirectory=%h/the-searcher
@@ -21,8 +27,6 @@ Restart=on-failure
 RestartSec=5
 # If Ollama is not up yet at boot, the first few starts fail. Keep trying for
 # five minutes rather than giving up.
-StartLimitBurst=60
-StartLimitIntervalSec=300
 
 # A research run holds the GPU for a while; do not kill it mid-read.
 TimeoutStopSec=60
