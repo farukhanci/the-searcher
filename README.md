@@ -282,3 +282,9 @@ made those measurements.
   caught. Ask in English regardless.
 - **One run at a time**, by design. Concurrent runs contend for the same GPU.
 
+
+## Recorded runs
+
+`runs/` holds unedited output from three real runs, with a note on what each
+one demonstrates — including a working run and an empty one on the same topic
+sixty-one seconds apart.
