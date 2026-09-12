@@ -183,14 +183,12 @@ def _clean(page: Page, html: str) -> Page:
 
     page.text = text.strip()
 
-    md = trafilatura.extract_metadata(html, default_url=page.url)
-    if md:
-        page.title = md.title or ""
-        page.meta = {
-            "author": md.author,
-            "date": md.date,
-            "sitename": md.sitename,
-        }
+    # No metadata pass. A fault-handler trace caught trafilatura's
+    # normalize_authors spinning at 100% CPU for minutes on a page whose author
+    # field held thousands of names, and it runs on the event loop, so the whole
+    # round stopped with it. The title is decoration - the passages, which are
+    # the point, come from the extract() above and are unaffected.
+    page.title = ""
 
     if page.chars < SHORT_TEXT_CHARS:
         page.status = "[note]"
