@@ -15,6 +15,7 @@ the caveats are produced here.
 from __future__ import annotations
 
 import asyncio
+import os
 import re
 import sys
 from datetime import date, datetime
@@ -23,7 +24,7 @@ from pathlib import Path
 from check import CheckResult, check_pages
 from fetch_clean import fetch_and_clean
 
-VAULT = Path.home() / "obsidian" / "Obsidian-1"
+VAULT = Path(os.environ.get("SENTINEL_VAULT", Path.home() / "obsidian" / "Obsidian-1"))
 SOURCES = VAULT / "sources"
 
 
