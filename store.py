@@ -24,8 +24,10 @@ from pathlib import Path
 from check import CheckResult, check_pages
 from fetch_clean import fetch_and_clean
 
+# Where finished research lands. SEARCHER_OUTPUT points anywhere; the default
+# is the Sentinel vault it was built for, so that setup keeps working untouched.
 VAULT = Path(os.environ.get("SENTINEL_VAULT", Path.home() / "obsidian" / "Obsidian-1"))
-SOURCES = VAULT / "sources"
+SOURCES = Path(os.environ.get("SEARCHER_OUTPUT", VAULT / "sources"))
 
 
 # ---------------------------------------------------------------- naming
