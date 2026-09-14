@@ -89,6 +89,16 @@ anything else — three wrong diagnoses during development all had this cause.
 - A SearXNG instance with the JSON format enabled
 - ~6 GB of VRAM at the defaults, or a lower `SEARCHER_NUM_CTX` on a smaller card
 
+On a bare Debian or Ubuntu, none of the commands below exist yet:
+
+```bash
+sudo apt install git python3 python3-venv python3-pip curl openssl docker.io
+sudo usermod -aG docker $USER   # then log out and back in
+```
+
+Without the group change every `docker` command fails on a permission error
+at the socket.
+
 Default model is `hf.co/openbmb/MiniCPM5-2B-GGUF:Q8_0`. At `num_ctx` 128000
 with a q8_0 KV cache it measures about 5.5 GB — but only with `num_gpu` set
 high enough to force every layer onto the card. Without that, Ollama's own
@@ -108,13 +118,13 @@ ollama pull hf.co/openbmb/MiniCPM5-2B-GGUF:Q8_0
 
 The Searcher asks SearXNG for JSON, which is off by default.
 
-Create `~/searxng/settings.yml`:
+Create `~/searxng/settings.yml` (`mkdir -p ~/searxng` first):
 
 ```yaml
 use_default_settings: true
 
 server:
-  secret_key: "CHANGE_ME"        # openssl rand -hex 32
+  secret_key: "CHANGE_ME"        # replace - see below
 
 search:
   formats:
@@ -138,6 +148,10 @@ engines:
   - name: semantic scholar
     timeout: 10.0
 ```
+
+Replace `CHANGE_ME` with output from `openssl rand -hex 32`. SearXNG does not
+enforce this - it starts and searches fine with the placeholder - but the key
+signs session data, so a published default is a published default.
 
 Then run it:
 
@@ -184,7 +198,8 @@ systemctl --user enable --now the-searcher
 
 The unit assumes the repo at `~/the-searcher` and the venv at
 `~/.venvs/searcher`. Edit it if yours differ. `loginctl enable-linger $USER`
-keeps it running when you are not logged in.
+keeps it running when you are not logged in - with `sudo` on a system without
+polkit, which answers `Access denied` otherwise.
 
 ## HTTP API
 
