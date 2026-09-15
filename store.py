@@ -74,8 +74,15 @@ def render(query: str, results: list[CheckResult]) -> str:
                       f"collected: {stamp}",
                       "collected_by: the-searcher"]
     if found:
-        out.append("sources:")
-        out += [f"  - {r.url}" for r in found]
+        # A comma-joined scalar, not a YAML list: the Sentinel's own
+        # frontmatter reader (sentinel/text.py split_frontmatter) is a flat
+        # key: value reader by design, not a YAML parser. A `- url` list line
+        # partitions on ":" like everything else, so `- https://...` was read
+        # as key `- https`, one entry per scheme, each overwritten by the
+        # last URL of that scheme and the rest silently lost. concepts.py
+        # already writes its own `sources` field this way (", ".join(...));
+        # match it here so both writers agree with the one reader.
+        out.append(f"sources: {_yaml_quote(', '.join(r.url for r in found))}")
     out += ["---", "",
             f"# {query}",
             "",
