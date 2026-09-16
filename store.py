@@ -15,19 +15,22 @@ the caveats are produced here.
 from __future__ import annotations
 
 import asyncio
-import os
 import re
 import sys
 from datetime import date, datetime
 from pathlib import Path
 
 from check import CheckResult, check_pages
+from config import env_path
 from fetch_clean import fetch_and_clean
 
 # Where finished research lands. SEARCHER_OUTPUT points anywhere; the default
 # is the Sentinel vault it was built for, so that setup keeps working untouched.
-VAULT = Path(os.environ.get("SENTINEL_VAULT", Path.home() / "obsidian" / "Obsidian-1"))
-SOURCES = Path(os.environ.get("SEARCHER_OUTPUT", VAULT / "sources"))
+# Both go through env_path, which expands `~`: a quoted `SEARCHER_OUTPUT=~/notes`
+# reaches us with the tilde intact, and a plain Path would file the research in
+# a directory literally named `~` beside this code.
+VAULT = env_path("SENTINEL_VAULT", Path.home() / "obsidian" / "Obsidian-1")
+SOURCES = env_path("SEARCHER_OUTPUT", VAULT / "sources")
 
 
 # ---------------------------------------------------------------- naming

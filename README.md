@@ -288,6 +288,12 @@ Every value below has a working default; set the variable only to change it.
 | `OLLAMA_URL` | `http://localhost:11434/api/chat` | Where Ollama is |
 | `SEARXNG_URL` | `http://localhost:8080/search` | Where SearXNG is |
 
+The two path variables accept `~`, quoted or not — `SEARCHER_OUTPUT="~/notes"`
+and a systemd `Environment=` line both work. Before that, the tilde came
+through literally and the research was filed in a directory named `~` beside
+the code: the write succeeded and the run printed `[DONE]`, so the only sign
+was research that was not in the vault. `test_store.py` guards it.
+
 The planner and the reader share one `NUM_CTX` on purpose: Ollama reloads the
 model whenever the context window changes, so different values cost a reload
 every round.
