@@ -87,7 +87,8 @@ anything else — three wrong diagnoses during development all had this cause.
 - Python 3.11+ (`asyncio.timeout`)
 - [Ollama](https://ollama.com), with a model that supports tool calling
 - A SearXNG instance with the JSON format enabled
-- ~6 GB of VRAM at the defaults, or a lower `SEARCHER_NUM_CTX` on a smaller card
+- ~6 GB of VRAM at the defaults; 4 GB is enough at a lower `SEARCHER_NUM_CTX`,
+  and the measurements are below
 
 On a bare Debian or Ubuntu, none of the commands below exist yet:
 
@@ -103,8 +104,27 @@ Default model is `hf.co/openbmb/MiniCPM5-2B-GGUF:Q8_0`. At `num_ctx` 128000
 with a q8_0 KV cache it measures about 5.5 GB — but only with `num_gpu` set
 high enough to force every layer onto the card. Without that, Ollama's own
 estimate leaves part of the model on the CPU and the same settings report
-6.2 GB with a 23/77 CPU/GPU split. Both values were measured on an RTX 4050
-Mobile; check `ollama ps` on yours.
+6.2 GB with a 23/77 CPU/GPU split.
+
+| `SEARCHER_NUM_CTX` | VRAM |
+| --- | --- |
+| 128000 | 5.5 GB |
+| 50000 | 3.6 GB |
+
+All measured on an RTX 4050 Mobile with the whole model on the card; check
+`ollama ps` on yours.
+
+**On a 4 GB card**, drop `SEARCHER_NUM_CTX` to 50000. Less context sounds
+like it should cost pages, and it does not, because a page never arrives whole
+and unbounded: `MAX_HTML_BYTES` and `MAX_PDF_PAGES` cut it before it reaches
+the model, and the checker reads one page per call rather than a batch. 32000
+was run earlier and behaved the same. A single cleaned page large enough to
+fill 50k would have to get past the size caps first.
+
+What the window is actually for is keeping the planner and the checker on the
+same number, so Ollama does not reload the model between reading and planning.
+Lower it in one place — `config.py` reads it once — and both halves move
+together.
 
 ## Setup
 
