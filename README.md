@@ -86,7 +86,7 @@ anything else — three wrong diagnoses during development all had this cause.
 
 - Python 3.11+ (`asyncio.timeout`)
 - [Ollama](https://ollama.com), with a model that supports tool calling
-- A SearXNG instance with the JSON format enabled
+- A [SearXNG](https://docs.searxng.org) instance with the JSON format enabled
 - ~6 GB of VRAM at the defaults; 4 GB is enough at a lower `SEARCHER_NUM_CTX`,
   and the measurements are below
 
@@ -145,6 +145,11 @@ use_default_settings: true
 
 server:
   secret_key: "CHANGE_ME"        # replace - see below
+  # SearXNG rate-limits what looks like a bot, and two parallel category
+  # queries per round look like one. Left on, it answers 403 to its own
+  # user - which is indistinguishable from the engines themselves
+  # rate-limiting, and that is the harder problem to diagnose.
+  limiter: false
 
 search:
   formats:
@@ -211,6 +216,7 @@ python3 plan.py "what is a chiplet"
 As a service, reachable over HTTP:
 
 ```bash
+mkdir -p ~/.config/systemd/user
 cp deploy/the-searcher.service ~/.config/systemd/user/
 systemctl --user daemon-reload
 systemctl --user enable --now the-searcher
@@ -223,7 +229,17 @@ polkit, which answers `Access denied` otherwise.
 
 ## HTTP API
 
-Three endpoints on port 8199.
+Three endpoints on port 8199. The service above is one way to get them; the
+other is to run the server yourself, which is what you want while changing
+anything:
+
+```bash
+source ~/.venvs/searcher/bin/activate
+uvicorn serve:app --host 127.0.0.1 --port 8199
+```
+
+`--host 0.0.0.0` only if something in a container has to reach it — the unit
+uses it for exactly that reason and for no other.
 
 `POST /ask` runs the full loop — search, read, verify, write up an answer.
 
@@ -282,6 +298,12 @@ Every value below has a working default; set the variable only to change it.
 | --- | --- | --- |
 | `SEARCHER_OUTPUT` | `$SENTINEL_VAULT/sources` | Where finished research is written |
 | `SENTINEL_VAULT` | `~/obsidian/Obsidian-1` | Vault root, used only for the default above |
+
+Both path variables expand `~`. And that default vault is one particular
+vault — mine. Running this next to the Sentinel means pointing both at the
+same place: set `SENTINEL_VAULT` here to whatever `--vault` is there, or set
+`SEARCHER_OUTPUT` directly. Left alone, research lands in a directory the
+Sentinel is not reading, and nothing says so.
 | `SEARCHER_MODEL` | `hf.co/openbmb/MiniCPM5-2B-GGUF:Q8_0` | Ollama model for both planning and reading |
 | `SEARCHER_NUM_CTX` | `128000` | Context window. Lower it on a smaller card |
 | `SEARCHER_NUM_GPU` | `256` | Layers on the GPU. High enough to mean "all of them" |
