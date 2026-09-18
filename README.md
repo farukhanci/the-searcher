@@ -212,11 +212,6 @@ use_default_settings: true
 
 server:
   secret_key: "CHANGE_ME"        # replace - see below
-  # SearXNG rate-limits what looks like a bot, and two parallel category
-  # queries per round look like one. Left on, it answers 403 to its own
-  # user - which is indistinguishable from the engines themselves
-  # rate-limiting, and that is the harder problem to diagnose.
-  limiter: false
 
 search:
   formats:
