@@ -1,6 +1,7 @@
 # The Searcher
 
-Ask a question, get an answer built only from what the sources actually said.
+A research agent that cannot invent a citation, because the code checks every
+one against the page it came from.
 
 The Searcher searches the web through a local SearXNG instance, downloads the
 pages it finds, and has a local model read them. Every passage it keeps is
@@ -9,6 +10,72 @@ paraphrased, the passage is dropped before it reaches the answer. The result is
 written to a markdown file alongside the URL each passage came from.
 
 It runs on a 2.6B model on a 6 GB card. No API keys.
+
+## What this is for
+
+Ask any model to research a topic and it will hand back an answer with
+citations attached. Some of those citations will be to pages that say
+something else, and some will be to pages that do not exist. This is not a
+defect of small models — it is what generation does when the job is "produce
+something that looks like sourced research", and a larger model produces the
+same shape more convincingly.
+
+The two usual answers are a bigger model and a stricter prompt. This is a
+third: **give each model call a job whose output code can check, and let the
+code decide the rest.**
+
+The reading model is never asked to summarise, judge, or select. It is asked
+to copy sentences out of a page it has been handed. That job has a mechanical
+test — is this sentence actually on that page? — and a sentence that fails it
+is dropped before it reaches anything else. Paraphrase fails it. Invention
+fails it. Nothing has to notice that the model was wrong, because the check
+does not depend on noticing.
+
+What is left over is judgement, and judgement lives in the code: which pages
+to fetch, what counts as usable, when a round is thin enough to try again,
+what gets written where.
+
+**Passages are the only thing that crosses between layers.** The reader sees a
+whole page; the planner never does, and receives 150–300 tokens per page
+instead of several thousand. That is what lets a run go several rounds without
+the planner filling up — and it is also the token story. Published comparisons
+put document-grounded retrieval at a few thousand tokens a query against
+hundreds of thousands for reading the corpus, a gap measured at 26x in a June
+2026 study. The planner here works below the retrieval end of that range,
+because it never sees a page at all.
+
+**Every page is read alone.** Not ten pages in one context. A long document
+degrades a small model's grip on the text and pages read together bleed into
+each other, so the calls are isolated even though isolation costs time. The
+accuracy it buys cannot be recovered afterwards.
+
+### Why this suits research
+
+What comes out is a file, not a chat message. It holds the question that was
+asked, every passage that survived the check, the URL each passage came from,
+and — listed separately — the pages that were fetched and could not be used.
+That last part is the one people ask for and rarely get: knowing what was
+tried and failed is part of knowing what a search covered.
+
+It is in daily use by an academic working on a multilingual literature
+synthesis. Broad questions to find the shape of a field, narrower ones once
+the sources are in, and articles pasted in by hand where the web cannot reach
+them — a paywalled PDF is dropped into the same folder and the rest of the
+system treats it identically.
+
+An English question reads pages in any language; Persian and Indonesian
+journals turned up in testing without being asked for.
+
+### What is unproven
+
+I looked for prior work that checks a model's output against its source in
+code rather than asking the model to be careful, and did not find it. I would
+like to be shown otherwise.
+
+What is tested is the mechanism: a passage that does not appear on the page
+does not survive, and that holds regardless of what the model returns. What is
+not tested is scale, or a wide range of subjects, or anyone else's idea of a
+hard question. That is what a second pair of hands would be for.
 
 ## Why it is built this way
 
@@ -298,17 +365,16 @@ Every value below has a working default; set the variable only to change it.
 | --- | --- | --- |
 | `SEARCHER_OUTPUT` | `$SENTINEL_VAULT/sources` | Where finished research is written |
 | `SENTINEL_VAULT` | `~/obsidian/Obsidian-1` | Vault root, used only for the default above |
-
-Both path variables expand `~`. And that default vault is one particular
-vault — mine. Running this next to the Sentinel means pointing both at the
-same place: set `SENTINEL_VAULT` here to whatever `--vault` is there, or set
-`SEARCHER_OUTPUT` directly. Left alone, research lands in a directory the
-Sentinel is not reading, and nothing says so.
 | `SEARCHER_MODEL` | `hf.co/openbmb/MiniCPM5-2B-GGUF:Q8_0` | Ollama model for both planning and reading |
 | `SEARCHER_NUM_CTX` | `128000` | Context window. Lower it on a smaller card |
 | `SEARCHER_NUM_GPU` | `256` | Layers on the GPU. High enough to mean "all of them" |
 | `OLLAMA_URL` | `http://localhost:11434/api/chat` | Where Ollama is |
 | `SEARXNG_URL` | `http://localhost:8080/search` | Where SearXNG is |
+
+That default vault is one particular vault — mine. Running this next to the
+Sentinel means pointing both at the same place: set `SENTINEL_VAULT` here to
+whatever `--vault` is there, or set `SEARCHER_OUTPUT` directly. Left alone,
+research lands in a directory the Sentinel is not reading, and nothing says so.
 
 The two path variables accept `~`, quoted or not — `SEARCHER_OUTPUT="~/notes"`
 and a systemd `Environment=` line both work. Before that, the tilde came
