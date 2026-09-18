@@ -153,7 +153,8 @@ anything else — three wrong diagnoses during development all had this cause.
 
 - Python 3.11+ (`asyncio.timeout`)
 - [Ollama](https://ollama.com), with a model that supports tool calling
-- A [SearXNG](https://docs.searxng.org) instance with the JSON format enabled
+- Docker, for [SearXNG](https://docs.searxng.org) — the compose file is in the
+  repository
 - ~6 GB of VRAM at the defaults; 4 GB is enough at a lower `SEARCHER_NUM_CTX`,
   and the measurements are below
 
@@ -195,17 +196,38 @@ together.
 
 ## Setup
 
-### 1. The model
+### 1. The package
+
+```bash
+git clone https://github.com/farukhanci/the-searcher
+cd the-searcher
+python3 -m venv ~/.venvs/searcher
+source ~/.venvs/searcher/bin/activate
+pip install -r requirements.txt
+```
+
+### 2. The model
 
 ```bash
 ollama pull hf.co/openbmb/MiniCPM5-2B-GGUF:Q8_0
 ```
 
-### 2. SearXNG
+### 3. SearXNG
 
-The Searcher asks SearXNG for JSON, which is off by default.
+Two commands, from the repository root:
 
-Create `~/searxng/settings.yml` (`mkdir -p ~/searxng` first):
+```bash
+sed -i "s/CHANGE_ME/$(openssl rand -hex 32)/" deploy/searxng-settings.yml
+docker compose up -d
+```
+
+That generates the secret key and starts SearXNG on `127.0.0.1:8080` with the
+settings this needs — JSON output, which is off by default, and three academic
+engines that are not enabled by default either. Bound to localhost, because
+only the Searcher on this machine talks to it.
+
+The configuration is `deploy/searxng-settings.yml`, and it is short on purpose
+— everything not named there keeps SearXNG's own default:
 
 ```yaml
 use_default_settings: true
@@ -236,37 +258,17 @@ engines:
     timeout: 10.0
 ```
 
-Replace `CHANGE_ME` with output from `openssl rand -hex 32`. SearXNG does not
-enforce this - it starts and searches fine with the placeholder - but the key
-signs session data, so a published default is a published default.
+SearXNG does not enforce the secret key — it starts and searches fine with the
+placeholder, which is exactly why it is easy to leave. The `sed` line above
+replaces it.
 
-Then run it:
-
-```bash
-docker run -d --name searxng --restart unless-stopped \
-  -p 8080:8080 \
-  -v ~/searxng:/etc/searxng \
-  -v searxng-cache:/var/cache/searxng \
-  searxng/searxng:latest
-```
-
-Check JSON works, and that the science engines answer:
+Check that JSON works and that the science engines answer:
 
 ```bash
 curl -s "http://localhost:8080/search?q=test&format=json" | head -c 200
 curl -s -G localhost:8080/search --data-urlencode "q=philosophy of education" \
   --data-urlencode "format=json" --data-urlencode "categories=science" \
   | python3 -c "import sys,json;print(len(json.load(sys.stdin)['results']))"
-```
-
-### 3. The Searcher
-
-```bash
-git clone https://github.com/farukhanci/the-searcher
-cd the-searcher
-python3 -m venv ~/.venvs/searcher
-source ~/.venvs/searcher/bin/activate
-pip install -r requirements.txt
 ```
 
 ## Running it

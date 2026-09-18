@@ -1,0 +1,25 @@
+# SearXNG, the one piece of this that runs in a container.
+#
+#   sed -i "s/CHANGE_ME/$(openssl rand -hex 32)/" deploy/searxng-settings.yml
+#   docker compose up -d
+#
+# The Searcher itself runs on the host, in a virtualenv, because it needs to
+# reach Ollama there and writes into a vault there. See the README.
+
+services:
+  searxng:
+    image: searxng/searxng:latest
+    container_name: searxng
+    restart: unless-stopped
+    ports:
+      # Localhost only. SEARXNG_URL in the Searcher points here, and nothing
+      # else needs to reach it.
+      - "127.0.0.1:8080:8080"
+    volumes:
+      # Mounted as a file rather than a directory, so SearXNG's own defaults
+      # for everything else stay where they are.
+      - ./deploy/searxng-settings.yml:/etc/searxng/settings.yml:ro
+      - searxng-cache:/var/cache/searxng
+
+volumes:
+  searxng-cache:

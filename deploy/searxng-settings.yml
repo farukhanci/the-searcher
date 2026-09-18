@@ -1,0 +1,42 @@
+# SearXNG configuration for the Searcher.
+# Reference: https://docs.searxng.org/admin/settings/
+#
+# Everything not named here keeps SearXNG's own default. What is here is
+# what this system needs and would not get otherwise.
+
+use_default_settings: true
+
+server:
+  # Replace before starting. It signs session data, and a published default
+  # is a published default:
+  #
+  #   sed -i "s/CHANGE_ME/$(openssl rand -hex 32)/" deploy/searxng-settings.yml
+  #
+  # SearXNG does not enforce this - it starts and searches fine with the
+  # placeholder, which is exactly why it is easy to leave.
+  secret_key: "CHANGE_ME"
+  image_proxy: true
+
+search:
+  # The one setting without which nothing works: SearXNG serves HTML only by
+  # default, and this asks for JSON.
+  formats:
+    - html
+    - json
+
+outgoing:
+  # Semantic Scholar was timing out with 200 ms to spare on the 5 s default.
+  request_timeout: 10.0
+  max_request_timeout: 15.0
+
+engines:
+  # API-based, no CAPTCHA, and between them they cover the social sciences and
+  # humanities that arXiv and PubMed do not. Google Scholar is enabled by
+  # default and mostly answers "unusual traffic"; there is no fix for that.
+  - name: crossref
+    disabled: false
+  - name: openalex
+    disabled: false
+  # Slow, but worth waiting for now that the timeout allows it.
+  - name: semantic scholar
+    timeout: 10.0
