@@ -161,7 +161,8 @@ anything else — three wrong diagnoses during development all had this cause.
 On a bare Debian or Ubuntu, none of the commands below exist yet:
 
 ```bash
-sudo apt install git python3 python3-venv python3-pip curl openssl docker.io
+sudo apt update && sudo apt install git python3 python3-venv python3-pip \
+    curl openssl docker.io docker-compose-v2
 sudo usermod -aG docker $USER   # then log out and back in
 ```
 
@@ -217,54 +218,56 @@ ollama pull hf.co/openbmb/MiniCPM5-2B-GGUF:Q8_0
 Two commands, from the repository root:
 
 ```bash
-sed -i "s/CHANGE_ME/$(openssl rand -hex 32)/" deploy/searxng-settings.yml
+echo "SEARXNG_SECRET=$(openssl rand -hex 32)" > .env
 docker compose up -d
 ```
 
-That generates the secret key and starts SearXNG on `127.0.0.1:8080` with the
-settings this needs — JSON output, which is off by default, and three academic
-engines that are not enabled by default either. Bound to localhost, because
-only the Searcher on this machine talks to it.
+That writes the secret key into `.env` — untracked, and the only place it
+lives — and starts SearXNG on `127.0.0.1:8080` with the settings this needs:
+JSON output, which is off by default, and three academic engines that are not
+enabled by default either. Bound to localhost, because only the Searcher on
+this machine talks to it.
+
+`compose.yml` passes the key in as `SEARXNG_SECRET`, which SearXNG reads
+itself and which takes precedence over the settings file. There is no default
+for it, on purpose: with no `.env`, `docker compose up -d` stops before
+starting anything and says `required variable SEARXNG_SECRET is missing a
+value`. The refusal has to come from here, because SearXNG does not enforce
+the key itself — it starts and searches fine on a published placeholder, which
+is exactly why one is easy to leave.
 
 The configuration is `deploy/searxng-settings.yml`, and it is short on purpose
-— everything not named there keeps SearXNG's own default:
+— everything not named there keeps SearXNG's own default. What it does name:
+JSON alongside HTML under `search.formats`, the one setting without which
+nothing here works; longer `outgoing` timeouts, because Semantic Scholar was
+timing out with 200 ms to spare on the 5 s default; `image_proxy`; and three
+engines, crossref and openalex enabled and semantic scholar given its own 10 s
+timeout. Those three are API-based, have no CAPTCHA, and between them cover
+the social sciences and humanities that arXiv and PubMed do not. Google
+Scholar is enabled by default and mostly answers "unusual traffic"; there is
+no fix for that. Read the file itself rather than a copy of it here — a copy
+is one more thing to drift.
 
-```yaml
-use_default_settings: true
-
-server:
-  secret_key: "CHANGE_ME"        # replace - see below
-
-search:
-  formats:
-    - html
-    - json
-
-outgoing:
-  # Semantic Scholar was timing out with 200 ms to spare on the 5 s default.
-  request_timeout: 10.0
-  max_request_timeout: 15.0
-
-engines:
-  # API-based, no CAPTCHA, and between them they cover the social sciences and
-  # humanities that arXiv and PubMed do not. Google Scholar is enabled by
-  # default and mostly answers "unusual traffic"; there is no fix for that.
-  - name: crossref
-    disabled: false
-  - name: openalex
-    disabled: false
-  # Slow, but worth waiting for now that the timeout allows it.
-  - name: semantic scholar
-    timeout: 10.0
-```
-
-SearXNG does not enforce the secret key — it starts and searches fine with the
-placeholder, which is exactly why it is easy to leave. The `sed` line above
-replaces it.
-
-Check that JSON works and that the science engines answer:
+**A different port.** `SEARXNG_PORT` moves it, for when 8080 is already taken
+by something else:
 
 ```bash
+echo "SEARXNG_PORT=8099" >> .env
+docker compose up -d
+```
+
+`SEARXNG_URL` has to be changed to match. It is what the Searcher actually
+dials, and it does not follow `SEARXNG_PORT` on its own — move the port
+without it and the Searcher calls a port with nothing on it. See Configuration
+below.
+
+SearXNG takes a few seconds to answer after the container starts, so the
+checks below wait for it first. They confirm that JSON works and that the
+science engines answer:
+
+```bash
+until curl -sf "http://localhost:8080/search?q=test&format=json" >/dev/null; do sleep 1; done
+
 curl -s "http://localhost:8080/search?q=test&format=json" | head -c 200
 curl -s -G localhost:8080/search --data-urlencode "q=philosophy of education" \
   --data-urlencode "format=json" --data-urlencode "categories=science" \
@@ -415,7 +418,7 @@ made those measurements.
 python3 test_store.py
 ```
 
-Five checks over the `sources` frontmatter field. It is a narrow suite: that
+Eight checks over the `sources` frontmatter field. It is a narrow suite: that
 one field was written as a YAML list while the Sentinel's frontmatter reader
 is flat by design, and the mismatch silently dropped every URL but the last
 from 29 files in a real vault. The test fails if the list form comes back.

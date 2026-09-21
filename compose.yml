@@ -1,6 +1,6 @@
 # SearXNG, the one piece of this that runs in a container.
 #
-#   sed -i "s/CHANGE_ME/$(openssl rand -hex 32)/" deploy/searxng-settings.yml
+#   echo "SEARXNG_SECRET=$(openssl rand -hex 32)" > .env
 #   docker compose up -d
 #
 # The Searcher itself runs on the host, in a virtualenv, because it needs to
@@ -9,12 +9,17 @@
 services:
   searxng:
     image: searxng/searxng:latest
-    container_name: searxng
     restart: unless-stopped
     ports:
       # Localhost only. SEARXNG_URL in the Searcher points here, and nothing
-      # else needs to reach it.
-      - "127.0.0.1:8080:8080"
+      # else needs to reach it. Set SEARXNG_PORT when 8080 is already taken —
+      # SEARXNG_URL has to be changed to match.
+      - "127.0.0.1:${SEARXNG_PORT:-8080}:8080"
+    environment:
+      # SearXNG reads this itself and it overrides the settings file, so the
+      # key never has to live in a tracked file. No default on purpose: compose
+      # refuses to start rather than run on a published placeholder.
+      SEARXNG_SECRET: "${SEARXNG_SECRET:?not set — create .env in the repo root, see README step 3}"
     volumes:
       # Mounted as a file rather than a directory, so SearXNG's own defaults
       # for everything else stay where they are.

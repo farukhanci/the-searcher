@@ -7,14 +7,11 @@
 use_default_settings: true
 
 server:
-  # Replace before starting. It signs session data, and a published default
-  # is a published default:
-  #
-  #   sed -i "s/CHANGE_ME/$(openssl rand -hex 32)/" deploy/searxng-settings.yml
-  #
-  # SearXNG does not enforce this - it starts and searches fine with the
-  # placeholder, which is exactly why it is easy to leave.
-  secret_key: "CHANGE_ME"
+  # secret_key is deliberately absent. It comes from the SEARXNG_SECRET
+  # environment variable, which SearXNG reads itself and which takes
+  # precedence over this file - so the key lives in .env, untracked, and
+  # never in the repository. compose.yml has no default for it and refuses
+  # to start without one; see step 3 of the README.
   image_proxy: true
 
 search:
