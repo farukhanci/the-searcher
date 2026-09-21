@@ -9,7 +9,7 @@ checked, word for word, against the page it came from — if the model
 paraphrased, the passage is dropped before it reaches the answer. The result is
 written to a markdown file alongside the URL each passage came from.
 
-It runs on a 2.6B model on a 6 GB card. No API keys.
+It runs on MiniCPM5-2B on a 6 GB card. No API keys.
 
 ## What this is for
 
@@ -121,8 +121,8 @@ Worth naming, because they are the reason the rest of the file can be specific:
 
 - Interleaving academic and general results was blamed twice for bad output and
   reverted twice. Both times the real cause was that seven of eight search
-  engines had rate-limited the machine. The rule that came out of it is in the
-  limits section: check the engines first.
+  engines had rate-limited the machine. The rule that came out of it is under
+  *What it does not do*: check the engines first.
 - "Sixteen pages floods the planner with 80k tokens" was a misreading of a log
   line. That figure is page text going to the readers, one isolated call each;
   the planner sees a fiftieth of it. The revert was withdrawn.
@@ -256,20 +256,29 @@ echo "SEARXNG_PORT=8099" >> .env
 docker compose up -d
 ```
 
-`SEARXNG_URL` has to be changed to match. It is what the Searcher actually
-dials, and it does not follow `SEARXNG_PORT` on its own — move the port
-without it and the Searcher calls a port with nothing on it. See Configuration
-below.
+`SEARXNG_URL` has to be changed to match — and not in `.env`. It is what the
+Searcher actually dials, and it does not follow `SEARXNG_PORT` on its own:
+move the port without it and the Searcher calls a port with nothing on it.
+
+**`.env` is docker compose's file and nothing else reads it.** Nothing in this
+package loads it — there is no `python-dotenv` here — so it configures the
+container and never the Searcher. `SEARXNG_PORT` and `SEARXNG_SECRET` belong
+there because compose is who wants them. Everything in the Configuration table
+below, `SEARXNG_URL` included, is read from the process environment instead:
+export it in the shell you run from, or add an `Environment=` line to the
+systemd unit. Put `SEARXNG_URL` in `.env` and it is silently ignored.
 
 SearXNG takes a few seconds to answer after the container starts, so the
 checks below wait for it first. They confirm that JSON works and that the
 science engines answer:
 
 ```bash
-until curl -sf "http://localhost:8080/search?q=test&format=json" >/dev/null; do sleep 1; done
+set -a; . ./.env; set +a    # .env is compose's file, not the shell's
 
-curl -s "http://localhost:8080/search?q=test&format=json" | head -c 200
-curl -s -G localhost:8080/search --data-urlencode "q=philosophy of education" \
+until curl -sf "http://localhost:${SEARXNG_PORT:-8080}/search?q=test&format=json" >/dev/null; do sleep 1; done
+
+curl -s "http://localhost:${SEARXNG_PORT:-8080}/search?q=test&format=json" | head -c 200
+curl -s -G localhost:${SEARXNG_PORT:-8080}/search --data-urlencode "q=philosophy of education" \
   --data-urlencode "format=json" --data-urlencode "categories=science" \
   | python3 -c "import sys,json;print(len(json.load(sys.stdin)['results']))"
 ```
@@ -360,6 +369,10 @@ One run at a time; a second request queues rather than being refused.
 ## Configuration
 
 Every value below has a working default; set the variable only to change it.
+These are read from the process environment — exported in the shell, or an
+`Environment=` line in the systemd unit. The repository's `.env` is not one of
+those places; docker compose reads that file, and nothing in this package
+does.
 
 | Variable | Default | What it does |
 | --- | --- | --- |

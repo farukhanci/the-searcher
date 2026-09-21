@@ -15,8 +15,8 @@ def env_path(name: str, default: Path | str) -> Path:
     """A path-valued setting, with a leading `~` expanded.
 
     A shell expands `~` only when it is unquoted and at the start of a word.
-    `SEARCHER_OUTPUT="~/notes"`, a systemd `Environment=` line or an .env file
-    all deliver the tilde here literally, and `Path` then reads it as a
+    `SEARCHER_OUTPUT="~/notes"` and a systemd `Environment=` line both
+    deliver the tilde here literally, and `Path` then reads it as a
     directory named `~` - so the write lands under the working directory
     instead of the home directory, succeeds, and says nothing. Every setting
     that names a place on disk goes through here.
