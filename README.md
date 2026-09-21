@@ -60,8 +60,8 @@ tried and failed is part of knowing what a search covered.
 It is in daily use by an academic working on a multilingual literature
 synthesis. Broad questions to find the shape of a field, narrower ones once
 the sources are in, and articles pasted in by hand where the web cannot reach
-them — a paywalled PDF is dropped into the same folder and the rest of the
-system treats it identically.
+them — the text of a paywalled article goes into a markdown note in the same
+folder, and the rest of the system treats it identically.
 
 An English question reads pages in any language; Persian and Indonesian
 journals turned up in testing without being asked for.
